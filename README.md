@@ -140,10 +140,8 @@ python predict_multiclass.py --config configs/multiclass.yaml \
 ### Evaluation 
 
 Each inference script produces a `jsonl` file with the fields `tokens`, `mentions`, `relations` and `id`.
-Models are evaluated using the usual coreference metrics, hierarchy (recall, precision and F1), 
-directed path ratio and AUC on the multiclass. For coreference metrics, we heavily rely
-on the [coval](https://github.com/ns-moosavi/coval/) script, a python implementation of 
-the coreference metrics including LEA.
+Models are evaluated using the usual coreference metrics using the [coval](https://github.com/ns-moosavi/coval/) script,
+ hierarchy (recall, precision and F1), directed path ratio and AUC on the multiclass. 
 
 ```
 python evaluate.py [gold_jsonl_path] [sys_jsonl_path]
