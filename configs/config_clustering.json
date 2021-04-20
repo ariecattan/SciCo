@@ -1,0 +1,27 @@
+{
+  "gpu_num" : [0],
+
+  "bert_model": "roberta-large",
+  "nli_model": "roberta-large-mnli",
+  "hidden_layer": 1024,
+  "dropout": 0.3,
+  "with_mention_width": true,
+  "with_head_attention": true,
+  "embedding_dimension": 20,
+
+
+  "use_gold_mentions": true,
+  "segment_window": 512,
+  "keep_singletons": true,
+
+  "topic_level": true,
+  "data_path": "data/final/test.jsonl",
+
+
+  "save_path": "checkpoints/baselines/ecb_model/test_final",
+  "model_path" : "checkpoints/baselines/ecb_model/model",
+  "model_num": 2,
+
+  "linkage_type": "average",
+  "threshold": 0.65
+}

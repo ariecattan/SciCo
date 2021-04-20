@@ -1,0 +1,33 @@
+gpu_num: [0, 1, 2, 3]
+random_seed: 0
+
+#model
+model:
+  lr: 0.00001
+  batch_size: 8
+  epochs: 1
+  bert_model: allenai/longformer-base-4096
+  optimizer: adamw
+  gradient_clip: 1
+  gradient_accumulation: 4
+
+
+# data and model path
+data:
+  training_set: data/final/train.jsonl
+  dev_set: data/final/dev.jsonl
+  test_set: data/final/test.jsonl
+
+
+full_doc: false
+model_path: checkpoints
+log: logs
+
+
+# inference
+checkpoint_multiclass: checkpoints/multiclass/version_3/checkpoints/epoch=0-step=4801.ckpt
+checkpoint_coref: checkpoints/coref/version_1/checkpoints/epoch=0-step=2400.ckpt
+checkpoint_hypernym: checkpoints/hypernym/version_4/checkpoints/epoch=0-step=4801.ckpt
+agg_threshold: 0.6  # for agglomerative clustering
+hypernym_threshold: 0.4 # for hypernym scores
+save_path: checkpoints/multiclass/pipeline

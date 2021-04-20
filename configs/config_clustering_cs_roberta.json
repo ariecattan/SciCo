@@ -1,0 +1,27 @@
+{
+  "gpu_num" : [0],
+
+  "bert_model": "allenai/cs_roberta_base",
+  "nli_model": "roberta-large-mnli",
+  "hidden_layer": 768,
+  "dropout": 0.3,
+  "with_mention_width": true,
+  "with_head_attention": true,
+  "embedding_dimension": 20,
+
+
+  "use_gold_mentions": true,
+  "segment_window": 512,
+  "keep_singletons": true,
+
+  "topic_level": true,
+  "data_path": "data/final/test.jsonl",
+
+
+  "save_path": "checkpoints/sci_model_final/cs_roberta",
+  "model_path" : "checkpoints/sci_model_final/cs_roberta/model",
+  "model_num": 1,
+
+  "linkage_type": "average",
+  "threshold": 0.6
+}
