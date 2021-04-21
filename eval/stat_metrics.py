@@ -21,15 +21,11 @@ class AUC:
             if topic not in self.system:
                 raise ValueError(f"The topic {topic['id']} does noe exist in the system")
 
-            print(topic)
             gold_topic_pred = self.get_multiclass_prediction(self.gold[topic])
             sys_topic_pred = self.get_multiclass_prediction(self.system[topic])
 
             self.gold_pred.extend(gold_topic_pred)
             self.sys_pred.extend(sys_topic_pred)
-
-            if topic == 'Image Model Blocks 1' or topic == 'Transformers 0':
-                continue
 
             y_hat_topic = self.get_one_hot_vector(sys_topic_pred)
             topic_score = roc_auc_score(gold_topic_pred, y_hat_topic, multi_class='ovo', average='macro')
