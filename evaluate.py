@@ -100,7 +100,7 @@ def main():
 
     auc = AUC(gold, system)
     print('AUROC'.ljust(15),
-          '%.2f' % auc.score * 100)
+          '%.2f' % (auc.score * 100))
 
 
 

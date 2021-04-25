@@ -16,7 +16,7 @@ import collections
 from itertools import product
 
 from models.datasets import CrossEncoderDataset
-from models.muticlass import CorefEntailmentLightning, BinaryCorefEntailmentLightning, HypernymModel
+from models.muticlass import CorefEntailmentLightning, BinaryCorefLightning, HypernymModel
 from utils.model_utils import get_greedy_relations, get_hypernym_relations
 from models.baselines import EntailmentModel
 
@@ -344,7 +344,7 @@ if __name__ == '__main__':
         inference.save_predicted_file(config['save_path'])
 
     else:
-        coref_model = BinaryCorefEntailmentLightning.load_from_checkpoint(config['checkpoint_coref'], config=config)
+        coref_model = BinaryCorefLightning.load_from_checkpoint(config['checkpoint_coref'], config=config)
         hypernym_model = HypernymModel.load_from_checkpoint(config['checkpoint_hypernym'], config=config)
         test_coref = CrossEncoderDataset(config["data"]["test_set"],
                                    full_doc=config['full_doc'],

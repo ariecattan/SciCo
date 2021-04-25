@@ -1,8 +1,10 @@
 transformers==4.2.2
 tqdm==4.56.0
-pyhocon==0.3.5.1
+pyhocon==0.3.51
 scikit-learn==0.24.1
-pytorch==1.7.1
-yaml==5.3.1
+torch==1.7.1
+PyYAML==5.3.1
 scipy==1.6.0
 textdistance==4.2.1
+jsonlines==2.0.0
+networkx==2.5.1
