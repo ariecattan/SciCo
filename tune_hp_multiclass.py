@@ -10,9 +10,9 @@ import os
 import torch
 from tqdm import tqdm
 import numpy as np
-from models.datasets import CrossEncoderDataset
-from models.muticlass import CorefEntailmentLightning
-from predict_multiclass import MulticlassInference
+from models.datasets import CrossEncoderDataset, BiEncoderDataset
+from models.muticlass import MulticlassBiEncoder, MulticlassCrossEncoder
+from predict import MulticlassInference
 
 from eval.shortest_path import ShortestPath
 from eval.hypernym import HypernymScore
@@ -23,6 +23,7 @@ from evaluate import get_coref_scores
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='configs/multiclass.yaml')
+    parser.add_argument('--method', type=str, default='cross', help='cross-encoder or bi-encoder')
     args = parser.parse_args()
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
@@ -48,10 +49,17 @@ if __name__ == '__main__':
 
 
     logger.info('loading models')
-    model = CorefEntailmentLightning.load_from_checkpoint(config['checkpoint_multiclass'], config=config)
+    if args.method == 'cross':
+        model = MulticlassCrossEncoder.load_from_checkpoint(config['checkpoint_multiclass_cross'], config=config)
+    else:
+        model = MulticlassBiEncoder.load_from_checkpoint(config['checkpoint_multiclass_bi'], config=config)
 
     logger.info('Loading data')
-    dev = CrossEncoderDataset(config["data"]["dev_set"], full_doc=config['full_doc'], multiclass='multiclass')
+    if args.method == 'cross':
+        dev = CrossEncoderDataset(config["data"]["dev_set"], full_doc=config['full_doc'], multiclass='multiclass')
+    else:
+        dev = BiEncoderDataset(config["data"]["dev_set"], full_doc=config['full_doc'], multiclass='multiclass')
+
     dev_loader = data.DataLoader(dev,
                                   batch_size=config["model"]["batch_size"] * 64,
                                   shuffle=False,
@@ -63,9 +71,9 @@ if __name__ == '__main__':
     trainer = pl.Trainer(gpus=config['gpu_num'], accelerator='dp')
     results = trainer.predict(model, dataloaders=dev_loader)
     results = torch.cat([torch.tensor(x) for x in results])
-    torch.save(results, 'checkpoints/dev_final_results.pt')
+    torch.save(results, 'checkpoints/multiclass/dev_results.pt')
 
-    # results = torch.load('checkpoints/dev_final_results.pt')
+    # results = torch.load('checkpoints/multiclass/dev_results.pt')
     coref_threshold = np.arange(0.4, 0.61, 0.1)
     hypernym_threshold = np.arange(0.4, 0.61, 0.1)
 

@@ -88,7 +88,7 @@ python run_coref_scorer [folder_dev_pred] [gold_dev_conll]
 to the test set path.  You also need to set the name of an `nli_model` in the config 
 for predicting the relations between the clusters. 
 ```
-python predict.py --config configs/config_clustering_cs_roberta
+python predict_cd_coref_entailment.py --config configs/config_clustering_cs_roberta
 ```
 
 * __Inference (cosine similarity)__: We also provide a script for clustering the 
@@ -114,8 +114,9 @@ can be done with only modifying the args `--multiclass` to {pipeline, multiclass
 * __Training__:  Set important config for the model and data path in `configs/multiclass.yaml`,
 then run the following script: 
 ```
-python train_cross_encoder_scorer.py --config configs/multiclass.yaml \
-    --multiclass multiclass # (or pipeline)
+python train.py --config configs/multiclass.yaml \
+    --method cross
+    --multiclass multiclass # (or pipeline) 
 ```
   
 
@@ -125,6 +126,7 @@ hierarchical relations.
 
 ```
 python tune_hp_multiclass.py --config configs/multiclass.yaml
+    --method cross
 ```
 
 
@@ -132,7 +134,8 @@ python tune_hp_multiclass.py --config configs/multiclass.yaml
 the following script on the test set.
 
 ```
-python predict_multiclass.py --config configs/multiclass.yaml \
+python predict.py --config configs/multiclass.yaml \
+    --method cross
     --multiclass multiclass # (or pipeline) 
 ```
 

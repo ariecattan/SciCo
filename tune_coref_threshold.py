@@ -8,7 +8,7 @@ from utils.conll import write_output_file
 from models.baselines import SpanScorer, SimplePairWiseClassifier, SpanEmbedder
 from utils.model_utils import *
 from utils.utils import *
-from predict import get_distance_matrix
+from predict_cd_coref_entailment import get_distance_matrix
 import collections
 import jsonlines
 from utils.corpus import Corpus

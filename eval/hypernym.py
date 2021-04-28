@@ -1,6 +1,8 @@
 import collections
 from itertools import chain, product
 import networkx as nx
+import sys
+import jsonlines
 
 class HypernymScore:
     def __init__(self, gold, system):
@@ -104,3 +106,19 @@ class HypernymScore:
             if (micro_recall + micro_precision) != 0 else 0
 
         return micro_recall, micro_precision, micro_f1
+
+
+if __name__ == '__main__':
+    gold_path = sys.argv[1]
+    sys_path = sys.argv[2]
+
+    with jsonlines.open(gold_path, 'r') as f:
+        gold = [line for line in f]
+
+    with jsonlines.open(sys_path, 'r') as f:
+        system = [line for line in f]
+
+    hypernyms = HypernymScore(gold, system)
+    print('hypernym'.ljust(15), 'Recall: %.2f' % (hypernyms.micro_recall * 100),
+          ' Precision: %.2f' % (hypernyms.micro_precision * 100),
+          ' F1: %.2f' % (hypernyms.micro_f1 * 100))

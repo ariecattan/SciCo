@@ -9,6 +9,16 @@ import torchmetrics
 from typing import Any, List, Optional
 
 
+def get_global_attention(input_ids, start_token, end_token):
+    global_attention_mask = torch.zeros(input_ids.shape)
+    global_attention_mask[:, 0] = 1  # global attention to the CLS token
+    start = torch.nonzero(input_ids == start_token)
+    end = torch.nonzero(input_ids == end_token)
+    globs = torch.cat((start, end))
+    value = torch.ones(globs.shape[0])
+    global_attention_mask.index_put_(tuple(globs.t()), value)
+    return global_attention_mask
+
 
 
 class HFMulticlassLightning(pl.LightningModule):
@@ -27,24 +37,26 @@ class HFMulticlassLightning(pl.LightningModule):
 
 
 
-class MulticlassCrossEncoder:
+class MulticlassModel:
     def __init__(self):
-        super(MulticlassCrossEncoder, self).__init__()
+        super(MulticlassModel, self).__init__()
 
 
     @classmethod
-    def get_model(cls, name, config):
-        if name == 'multiclass':
-            return CorefEntailmentLightning(config, num_classes=4)
+    def get_model(cls, name, training_method, config):
+        if name == 'multiclass' and training_method == 'bi':
+            return MulticlassBiEncoder(config, num_classes=4)
+        elif name == 'multiclass' and training_method == 'cross':
+            return MulticlassCrossEncoder(config, num_classes=4)
         elif name == 'coref':
-            return BinaryCorefLightning(config)
+            return BinaryCorefCrossEncoder(config)
         elif name == 'hypernym':
-            return HypernymModel(config)
+            return HypernymCrossEncoder(config)
 
 
 
 
-class CorefEntailmentLightning(pl.LightningModule):
+class MulticlassCrossEncoder(pl.LightningModule):
     '''
     multiclass classification with labels:
     0 not related
@@ -54,7 +66,7 @@ class CorefEntailmentLightning(pl.LightningModule):
     '''
 
     def __init__(self, config, num_classes=4):
-        super(CorefEntailmentLightning, self).__init__()
+        super(MulticlassCrossEncoder, self).__init__()
         self.long = True if 'longformer' in config["model"]["bert_model"] else False
         self.config = config
 
@@ -68,11 +80,6 @@ class CorefEntailmentLightning(pl.LightningModule):
         self.model = AutoModel.from_pretrained(config["model"]["bert_model"], add_pooling_layer=False)
         self.model.resize_token_embeddings(len(self.tokenizer))
         self.linear = nn.Linear(self.model.config.hidden_size, num_classes)
-        # self.linear = nn.Sequential(
-        #     nn.Linear(self.model.config.hidden_size, 128),
-        #     nn.ReLU(),
-        #     nn.Linear(128, num_classes)
-        # )
         self.criterion = torch.nn.CrossEntropyLoss()
 
 
@@ -205,30 +212,20 @@ class CorefEntailmentLightning(pl.LightningModule):
         return torch.optim.AdamW(self.parameters(), lr=self.config['model']['lr'])
 
 
-    def get_global_attention(self, input_ids):
-        global_attention_mask = torch.zeros(input_ids.shape)
-        global_attention_mask[:, 0] = 1  # global attention to the CLS token
-        start = torch.nonzero(input_ids == self.start)
-        end = torch.nonzero(input_ids == self.end)
-        globs = torch.cat((start, end))
-        value = torch.ones(globs.shape[0])
-        global_attention_mask.index_put_(tuple(globs.t()), value)
-        return global_attention_mask
-
 
     def tokenize_batch(self, batch):
         inputs, labels = zip(*batch)
         tokens = self.tokenizer(list(inputs), padding=True)
         input_ids = torch.tensor(tokens['input_ids'])
         attention_mask = torch.tensor(tokens['attention_mask'])
-        global_attention_mask = self.get_global_attention(input_ids)
+        global_attention_mask = get_global_attention(input_ids, self.start, self.end)
         labels = torch.stack(labels)
 
         return (input_ids, attention_mask, global_attention_mask), labels
 
 
 
-class BinaryCorefLightning(pl.LightningModule):
+class BinaryCorefCrossEncoder(pl.LightningModule):
     '''
     multiclass classification with labels:
     0 not related, hypernyn, or hyponym
@@ -236,7 +233,7 @@ class BinaryCorefLightning(pl.LightningModule):
     '''
 
     def __init__(self, config):
-        super(BinaryCorefLightning, self).__init__()
+        super(BinaryCorefCrossEncoder, self).__init__()
         self.long = True if 'longformer' in config["model"]["bert_model"] else False
         self.config = config
 
@@ -357,30 +354,20 @@ class BinaryCorefLightning(pl.LightningModule):
         return torch.optim.AdamW(self.parameters(), lr=self.config['model']['lr'])
 
 
-    def get_global_attention(self, input_ids):
-        global_attention_mask = torch.zeros(input_ids.shape)
-        global_attention_mask[:, 0] = 1  # global attention to the CLS token
-        start = torch.nonzero(input_ids == self.start)
-        end = torch.nonzero(input_ids == self.end)
-        globs = torch.cat((start, end))
-        value = torch.ones(globs.shape[0])
-        global_attention_mask.index_put_(tuple(globs.t()), value)
-        return global_attention_mask
-
 
     def tokenize_batch(self, batch):
         inputs, labels = zip(*batch)
         tokens = self.tokenizer(list(inputs), padding=True)
         input_ids = torch.tensor(tokens['input_ids'])
         attention_mask = torch.tensor(tokens['attention_mask'])
-        global_attention_mask = self.get_global_attention(input_ids)
+        global_attention_mask = get_global_attention(input_ids, self.start, self.end)
         labels = torch.stack(labels)
 
         return (input_ids, attention_mask, global_attention_mask), labels
 
 
 
-class HypernymModel(pl.LightningModule):
+class HypernymCrossEncoder(pl.LightningModule):
     '''
         multiclass classification with labels:
         0 not related or coref
@@ -389,7 +376,7 @@ class HypernymModel(pl.LightningModule):
         '''
 
     def __init__(self, config, num_classes=3):
-        super(HypernymModel, self).__init__()
+        super(HypernymCrossEncoder, self).__init__()
         self.long = True if 'longformer' in config["model"]["bert_model"] else False
         self.config = config
 
@@ -503,22 +490,12 @@ class HypernymModel(pl.LightningModule):
         return torch.optim.AdamW(self.parameters(), lr=self.config['model']['lr'])
 
 
-    def get_global_attention(self, input_ids):
-        global_attention_mask = torch.zeros(input_ids.shape)
-        global_attention_mask[:, 0] = 1  # global attention to the CLS token
-        start = torch.nonzero(input_ids == self.start)
-        end = torch.nonzero(input_ids == self.end)
-        globs = torch.cat((start, end))
-        value = torch.ones(globs.shape[0])
-        global_attention_mask.index_put_(tuple(globs.t()), value)
-        return global_attention_mask
-
     def tokenize_batch(self, batch):
         inputs, labels = zip(*batch)
         tokens = self.tokenizer(list(inputs), padding=True)
         input_ids = torch.tensor(tokens['input_ids'])
         attention_mask = torch.tensor(tokens['attention_mask'])
-        global_attention_mask = self.get_global_attention(input_ids)
+        global_attention_mask = get_global_attention(input_ids, self.start, self.end)
         labels = torch.stack(labels)
 
         return (input_ids, attention_mask, global_attention_mask), labels
@@ -564,12 +541,87 @@ class MulticlassBiEncoder(pl.LightningModule):
         return scores
 
 
-    def tokenize_batch(self, batch):
-        inputs, labels = zip(*batch)
-        tokens = self.tokenizer(list(inputs), padding=True)
+    def training_step(self, batch, batch_idx):
+        m1, m2, y = batch
+        y_hat = self(m1, m2)
+        loss = self.criterion(y_hat, y)
+        return loss
+
+
+    def validation_step(self, batch, batch_idx):
+        m1, m2, y = batch
+        y_hat = self(m1, m2)
+        y_hat = torch.softmax(y_hat, dim=1)
+        loss = self.criterion(y_hat, y)
+        self.compute_metrics(y_hat, y)
+        self.log('val_loss', loss, on_epoch=True, on_step=False)
+
+        return loss
+
+
+    def validation_epoch_end(self, outputs):
+        self.log_metrics()
+
+    def predict_step(self, batch: Any, batch_idx: int, dataloader_idx: Optional[int] = None):
+        m1, m2, y = batch
+        y_hat = self(m1, m2)
+        y_hat = torch.softmax(y_hat, dim=1)
+        return y_hat
+
+
+
+    def compute_metrics(self, y_hat, y):
+        self.acc(y_hat, y)
+        self.f1(y_hat, y)
+        self.recall(y_hat, y)
+        self.val_precision(y_hat, y)
+        # self.val_auroc(y_hat, y)
+
+
+    def log_metrics(self):
+        self.log('acc', self.acc.compute())
+        f1_negative, f1_coref, f1_hypernym, f1_hyponym = self.f1.compute()
+        recall_negative, recall_coref, recall_hypernym, recall_hyponym = self.recall.compute()
+        precision_negative, precision_coref, precision_hypernym, precision_hyponym = self.val_precision.compute()
+        self.log('f1_coref', f1_coref)
+        self.log('recall_coref', recall_coref)
+        self.log('precision_coref', precision_coref)
+        self.log('f1_hypernym', f1_hypernym)
+        self.log('recall_hypernym', recall_hypernym)
+        self.log('precision_hypernym', precision_hypernym)
+        self.log('f1_hyponym', f1_hyponym)
+        self.log('recall_hyponym', recall_hyponym)
+        self.log('precision_hyponym', precision_hyponym)
+
+
+    def configure_optimizers(self):
+        return torch.optim.AdamW(self.parameters(), lr=self.config['model']['lr'])
+
+
+    def get_global_attention(self, input_ids):
+        global_attention_mask = torch.zeros(input_ids.shape)
+        global_attention_mask[:, 0] = 1  # global attention to the CLS token
+        start = torch.nonzero(input_ids == self.start)
+        end = torch.nonzero(input_ids == self.end)
+        globs = torch.cat((start, end))
+        value = torch.ones(globs.shape[0])
+        global_attention_mask.index_put_(tuple(globs.t()), value)
+        return global_attention_mask
+
+
+    def tokenize_mention(self, mentions):
+        tokens = self.tokenizer(list(mentions), padding=True)
         input_ids = torch.tensor(tokens['input_ids'])
         attention_mask = torch.tensor(tokens['attention_mask'])
         global_attention_mask = self.get_global_attention(input_ids)
+        return input_ids, attention_mask, global_attention_mask
+
+
+    def tokenize_batch(self, batch):
+        first, second, labels = zip(*batch)
+        m1 = self.tokenize_mention(first)
+        m2 = self.tokenize_mention(second)
         labels = torch.stack(labels)
 
-        return (input_ids, attention_mask, global_attention_mask), labels
+        return m1, m2, labels
+

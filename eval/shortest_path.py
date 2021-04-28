@@ -4,7 +4,8 @@ from itertools import product
 from scipy import stats
 import numpy as np
 from itertools import chain
-
+import sys
+import jsonlines
 
 
 class ShortestPath:
@@ -123,34 +124,17 @@ class ShortestPath:
 
 
 
-    #
-    #
-    # def get_all_scores(gold, system, directed, with_tn=False):
-    #     overall_num, overall_denum = 0, 0
-    #     overall_gold_scores, overall_sys_scores = [], []
-    #     spearman_avg = []
-    #     macro_avg = 0
-    #     for topic in gold.keys():
-    #         if topic not in system:
-    #             raise ValueError(topic)
-    #
-    #         numerator, denominator, gold_scores, sys_scores = get_overall_score_v2(gold[topic], system[topic],
-    #                                                                                directed=directed, with_tn=with_tn)
-    #         overall_num += numerator
-    #         overall_denum += denominator
-    #
-    #         sperman_topic = stats.spearmanr(gold_scores, sys_scores)
-    #         spearman_avg.append(sperman_topic[0])
-    #
-    #         overall_gold_scores.extend(gold_scores)
-    #         overall_sys_scores.extend(sys_scores)
-    #
-    #         macro_avg += numerator / denominator
-    #
-    #     micro_avg = round(overall_num / overall_denum * 100, 1)
-    #     macro_avg = round(macro_avg / len(gold) * 100, 1)
-    #     spearman = stats.spearmanr(overall_sys_scores, overall_gold_scores)
-    #
-    #     sparman_macro = round(sum(spearman_avg) / len(spearman_avg) * 100, 1)
-    #     return micro_avg, macro_avg, sparman_macro, (round(spearman[0] * 100, 1), spearman[1])
-    #
+if __name__ == '__main__':
+    gold_path = sys.argv[1]
+    sys_path = sys.argv[2]
+
+    with jsonlines.open(gold_path, 'r') as f:
+        gold = [line for line in f]
+
+    with jsonlines.open(sys_path, 'r') as f:
+        system = [line for line in f]
+
+    path_ratio = ShortestPath(gold, system, directed=True, with_tn=False)
+    print('Path Ratio'.ljust(15),
+          'Micro: %.2f' % (path_ratio.micro_average * 100),
+          'Macro: %.2f' % (path_ratio.macro_average * 100))
