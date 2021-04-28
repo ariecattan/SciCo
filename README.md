@@ -115,7 +115,7 @@ can be done with only modifying the args `--multiclass` to {pipeline, multiclass
 then run the following script: 
 ```
 python train.py --config configs/multiclass.yaml \
-    --method cross
+    --method cross \
     --multiclass multiclass # (or pipeline) 
 ```
   
@@ -125,7 +125,7 @@ the threshold for the agglomerative clustering and the stopping criterion for th
 hierarchical relations. 
 
 ```
-python tune_hp_multiclass.py --config configs/multiclass.yaml
+python tune_hp_multiclass.py --config configs/multiclass.yaml \
     --method cross
 ```
 
@@ -135,7 +135,7 @@ the following script on the test set.
 
 ```
 python predict.py --config configs/multiclass.yaml \
-    --method cross
+    --method cross \
     --multiclass multiclass # (or pipeline) 
 ```
 

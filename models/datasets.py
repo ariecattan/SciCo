@@ -26,14 +26,17 @@ class CrossEncoderDataset(data.Dataset):
         self.is_training = is_training
 
         self.pairs, self.labels = [], []
+        self.first, self.second = [], []
         self.info_pairs = []
         for i, topic in enumerate(self.data):
             if self.multiclass == 'multiclass':
                 inputs, labels, info_pairs = self.get_topic_pairs(topic)
             elif self.multiclass == 'hypernym':
                 inputs, labels, info_pairs = self.get_topic_pair_for_hypernym(topic)
-            elif self.multiclass == 'coref':
+            else:
                 inputs, labels, info_pairs = self.get_topic_pairs_for_binary_classification(topic)
+
+
             self.pairs.extend(inputs)
             self.labels.extend(labels)
             pair_nums = len(info_pairs)
@@ -48,7 +51,7 @@ class CrossEncoderDataset(data.Dataset):
 
 
     def __len__(self):
-        return len(self.pairs)
+        return len(self.labels)
 
 
     def __getitem__(self, idx):
@@ -72,8 +75,12 @@ class CrossEncoderDataset(data.Dataset):
             first, second = zip(*product(range(len(mentions)), repeat=2))
 
         first, second = np.array(first), np.array(second)
+
+
         seps = np.array([self.sep] * len(first))
         inputs = np.char.add(np.char.add(mentions[first], seps), mentions[second]).tolist()
+
+
 
 
         labels = [topic['mentions'][x][-1] == topic['mentions'][y][-1]
@@ -100,6 +107,7 @@ class CrossEncoderDataset(data.Dataset):
 
         first, second = zip(*[(x, y) for x, y in product(range(len(mentions)), repeat=2) if x != y])
         first, second = np.array(first), np.array(second)
+
         seps = np.array([self.sep] * len(first))
         inputs = np.char.add(np.char.add(mentions[first], seps), mentions[second]).tolist()
 
@@ -132,6 +140,7 @@ class CrossEncoderDataset(data.Dataset):
 
         first, second = zip(*[(x, y) for x, y in product(range(len(mentions)), repeat=2) if x != y])
         first, second = np.array(first), np.array(second)
+
         seps = np.array([self.sep] * len(first))
         inputs = np.char.add(np.char.add(mentions[first], seps), mentions[second]).tolist()
 
@@ -180,15 +189,195 @@ class CrossEncoderDataset(data.Dataset):
 
 
 
+
+
+
 class BiEncoderDataset(data.Dataset):
-    def __init__(self, data_path, full_doc=True, multiclass='all', sep_token='</s>',):
+    def __init__(self, data_path, full_doc=True, multiclass='multiclass', sep_token='</s>', is_training=True):
         super(BiEncoderDataset, self).__init__()
         with jsonlines.open(data_path, 'r') as f:
             self.data = [topic for topic in f]
 
+        for i, topic in enumerate(self.data):
+            self.data[i]['mention_text'] = np.array([' '.join(topic['flatten_tokens'][start:end + 1])
+                                                   for start, end, _ in topic['flatten_mentions']])
+
+        self.sep = sep_token
         self.full_doc = full_doc
+        if multiclass not in {'coref', 'hypernym', 'multiclass'}:
+            raise ValueError(f"The multiclass value needs to be in (coref, hypernym, multiclass), got {multiclass}.")
         self.multiclass = multiclass
-        self.sep_token = sep_token
+        self.is_training = is_training
+
+        self.pairs, self.labels = [], []
+        self.first, self.second = [], []
+        self.info_pairs = []
+        for i, topic in enumerate(self.data):
+            if self.multiclass == 'multiclass':
+                m1, m2, labels, info_pairs = self.get_topic_pairs(topic)
+            elif self.multiclass == 'hypernym':
+                m1, m2, labels, info_pairs = self.get_topic_pair_for_hypernym(topic)
+            else:
+                m1, m2, labels, info_pairs = self.get_topic_pairs_for_binary_classification(topic)
+
+            self.first.extend(m1)
+            self.second.extend(m2)
+
+            # self.pairs.extend(inputs)
+            self.labels.extend(labels)
+            pair_nums = len(info_pairs)
+            info_pairs = np.concatenate((np.array([i] * pair_nums).reshape(pair_nums, 1),
+                                        info_pairs), axis=1)
+            self.info_pairs.extend(info_pairs)
+
+        if self.multiclass == 'multiclass' or self.multiclass == 'hypernym':
+            self.labels = torch.tensor(self.labels, dtype=torch.long)
+        else:
+            self.labels = torch.tensor(self.labels, dtype=torch.float)
+
+
+    def __len__(self):
+        return len(self.labels)
+
+
+    def __getitem__(self, idx):
+        return self.first[idx], self.second[idx], self.labels[idx]
+
+
+
+
+    def get_topic_pairs_for_binary_classification(self, topic):
+        mentions = []
+        for mention in topic['mentions']:
+            if self.full_doc:
+                mentions.append(self.get_full_doc_mention(mention, topic['tokens']))
+            else:
+                mentions.append(self.get_sentence_context(mention, topic['tokens'], topic['sentences']))
+        mentions = np.array(mentions)
+
+        if self.is_training:
+            first, second = zip(*combinations(range(len(mentions)), r=2))
+        else:
+            first, second = zip(*product(range(len(mentions)), repeat=2))
+
+        first, second = np.array(first), np.array(second)
+
+        m1 = mentions[first]
+        m2 = mentions[second]
+        #
+        # seps = np.array([self.sep] * len(first))
+        # inputs = np.char.add(np.char.add(mentions[first], seps), mentions[second]).tolist()
+
+
+
+
+        labels = [topic['mentions'][x][-1] == topic['mentions'][y][-1]
+                  for x, y in zip(first, second)]
+
+        return m1, m2, labels, list(zip(first, second))
+
+
+
+
+    def get_topic_pair_for_hypernym(self, topic):
+        '''
+                :param topic:
+                :return:
+                '''
+        relations = [(x, y) for x, y in topic['relations']]
+        mentions = []
+        for mention in topic['mentions']:
+            if self.full_doc:
+                mentions.append(self.get_full_doc_mention(mention, topic['tokens']))
+            else:
+                mentions.append(self.get_sentence_context(mention, topic['tokens'], topic['sentences']))
+        mentions = np.array(mentions)
+
+        first, second = zip(*[(x, y) for x, y in product(range(len(mentions)), repeat=2) if x != y])
+        first, second = np.array(first), np.array(second)
+
+        m1 = mentions[first]
+        m2 = mentions[second]
+        # seps = np.array([self.sep] * len(first))
+        # inputs = np.char.add(np.char.add(mentions[first], seps), mentions[second]).tolist()
+
+        labels = []
+        for x, y in zip(first, second):
+            cluster_x, cluster_y = topic['mentions'][x][-1], topic['mentions'][y][-1]
+            if (cluster_x, cluster_y) in relations:
+                labels.append(1)
+            elif (cluster_y, cluster_x) in relations:
+                labels.append(2)
+            else:
+                labels.append(0)
+
+        return m1, m2, labels, list(zip(first, second))
+
+
+    def get_topic_pairs(self, topic):
+        '''
+        :param topic:
+        :return:
+        '''
+        relations = [(x, y) for x, y in topic['relations']]
+        mentions = []
+        for mention in topic['mentions']:
+            if self.full_doc:
+                mentions.append(self.get_full_doc_mention(mention, topic['tokens']))
+            else:
+                mentions.append(self.get_sentence_context(mention, topic['tokens'], topic['sentences']))
+        mentions = np.array(mentions)
+
+        first, second = zip(*[(x, y) for x, y in product(range(len(mentions)), repeat=2) if x != y])
+        first, second = np.array(first), np.array(second)
+
+
+        m1 = mentions[first]
+        m2 = mentions[second]
+        # seps = np.array([self.sep] * len(first))
+        # inputs = np.char.add(np.char.add(mentions[first], seps), mentions[second]).tolist()
+
+        labels = []
+        for x, y in zip(first, second):
+            cluster_x, cluster_y = topic['mentions'][x][-1], topic['mentions'][y][-1]
+            if cluster_x == cluster_y:
+                labels.append(1)
+            elif (cluster_x, cluster_y) in relations:
+                labels.append(2)
+            elif (cluster_y, cluster_x) in relations:
+                labels.append(3)
+            else:
+                labels.append(0)
+
+        return m1, m2, labels, list(zip(first, second))
+
+
+
+    def get_full_doc_mention(self, mention, tokens):
+        doc_id, start, end, _ = mention
+        mention_rep = tokens[doc_id][:start] + ['<m>']
+        mention_rep += tokens[doc_id][start:end + 1] + ['</m>']
+        mention_rep += tokens[doc_id][end + 1:]
+        return ' '.join(mention_rep)
+
+
+
+
+    def get_sentence_context(self, mention, tokens, sentences):
+        doc_id, start, end, _ = mention
+        sent_start, sent_end = 0, len(tokens) - 1
+        i = 0
+        while i < len(sentences[doc_id]):
+            sent_start, sent_end = sentences[doc_id][i]
+            if start >= sent_start and end <= sent_end:
+                break
+            i += 1
+
+        mention_rep = tokens[doc_id][sent_start:start] + ['<m>']
+        mention_rep += tokens[doc_id][start:end + 1] + ['</m>']
+        mention_rep += tokens[doc_id][end + 1:sent_end] + [self.sep]
+
+        return ' '.join(mention_rep)
 
 
 
