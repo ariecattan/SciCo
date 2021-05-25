@@ -25,9 +25,9 @@ log: logs
 
 
 # inference
-checkpoint_multiclass: /net/nfs.cs/s2-research/ariec/scico/models/multiclass/version_6/checkpoints/epoch=0-step=2221.ckpt
-checkpoint_coref: /net/nfs.cs/s2-research/ariec/scico/models/coref/version_8/checkpoints/epoch=0-step=2221.ckpt
-checkpoint_hypernym: /net/nfs.cs/s2-research/ariec/scico/models/hypernym/version_5/checkpoints/epoch=0-step=4443.ckpt
+checkpoint_multiclass: path-to-multiclass-ckpt
+checkpoint_coref: path-to-binary-coref-ckpt
+checkpoint_hypernym: path-hierarchy-model-ckpt
 agg_threshold: 0.6  # for agglomerative clustering
 hypernym_threshold: 0.4 # for hypernym scores
-save_path: /net/nfs.cs/s2-research/ariec/scico/models/coref/version_8
+save_path: path-to-save-dir
