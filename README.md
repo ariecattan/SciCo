@@ -55,9 +55,6 @@ conda activate scico
 ```
  
 Install all dependencies using `pip install -r requirements.txt`. \
-Install `pytorch lightning` from source in [this](https://github.com/PyTorchLightning/pytorch-lightning/) repo.
-
-
 We provide the code for training the baseline models, Pipeline and Multiclass.
 
 
@@ -115,8 +112,7 @@ can be done with only modifying the args `--multiclass` to {pipeline, multiclass
 then run the following script: 
 ```
 python train.py --config configs/multiclass.yaml \
-    --method cross \
-    --multiclass multiclass # (or pipeline) 
+    --multiclass multiclass # (or coref or hypernym) 
 ```
   
 
@@ -125,8 +121,7 @@ the threshold for the agglomerative clustering and the stopping criterion for th
 hierarchical relations. 
 
 ```
-python tune_hp_multiclass.py --config configs/multiclass.yaml \
-    --method cross
+python tune_hp_multiclass.py --config configs/multiclass.yaml 
 ```
 
 
@@ -135,7 +130,6 @@ the following script on the test set.
 
 ```
 python predict.py --config configs/multiclass.yaml \
-    --method cross \
     --multiclass multiclass # (or pipeline) 
 ```
 
@@ -144,9 +138,11 @@ python predict.py --config configs/multiclass.yaml \
 
 Each inference script produces a `jsonl` file with the fields `tokens`, `mentions`, `relations` and `id`.
 Models are evaluated using the usual coreference metrics using the [coval](https://github.com/ns-moosavi/coval/) script,
- hierarchy (recall, precision and F1), directed path ratio and AUC on the multiclass. 
+ hierarchy (recall, precision and F1), and directed path ratio. 
 
 ```
-python evaluate.py [gold_jsonl_path] [sys_jsonl_path]
+python evaluate.py [gold_jsonl_path] [sys_jsonl_path] options
 ```
 
+If you want to evaluate only on the hard topics (based on levenshtein performance, see Section 4.5), 
+you can set the `options` to be `hard_10`, `hard_20` or `curated`.

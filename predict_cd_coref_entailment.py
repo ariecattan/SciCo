@@ -28,18 +28,14 @@ def init_models(config, device):
                                                       "span_repr_{}".format(config['model_num'])),
                                          map_location=device))
     span_repr.eval()
-    span_scorer = SpanScorer(config).to(device)
-    # span_scorer.load_state_dict(torch.load(os.path.join(config['model_path'],
-    #                                                     "span_scorer_{}".format(config['model_num'])),
-    #                                        map_location=device))
-    span_scorer.eval()
+
     pairwise_scorer = SimplePairWiseClassifier(config).to(device)
     pairwise_scorer.load_state_dict(torch.load(os.path.join(config['model_path'],
                                                            "pairwise_scorer_{}".format(config['model_num'])),
                                               map_location=device))
     pairwise_scorer.eval()
 
-    return span_repr, span_scorer, pairwise_scorer
+    return span_repr, pairwise_scorer
 
 
 
@@ -131,7 +127,7 @@ if __name__ == '__main__':
     hypernym_model = EntailmentModel(config['nli_model'], device)
 
     config['bert_hidden_size'] = bert_model.config.hidden_size
-    span_repr, span_scorer, pairwise_scorer = init_models(config, device)
+    span_repr, pairwise_scorer = init_models(config, device)
     clustering = AgglomerativeClustering(n_clusters=None, affinity='precomputed', linkage=config['linkage_type'],
                                          distance_threshold=config['threshold'])
 
@@ -149,13 +145,8 @@ if __name__ == '__main__':
 
     all_scores, all_labels = [], []
     for topic_num, topic in enumerate(tqdm(data.topics)):
-        # logger.info(f"Processing topic {topic_num}")
-
         doc_num, docs_embeddings, docs_length = pad_and_read_bert(topic['bert_tokens'], bert_model)
         continuous_embeddings, width, clusters = get_mention_embeddings(topic, docs_embeddings)
-
-
-
         start_end = torch.stack([torch.cat((mention[0], mention[-1])) for mention in continuous_embeddings])
         width = torch.tensor(width, device=device)
         clusters = torch.tensor(clusters, device=device)
@@ -169,7 +160,6 @@ if __name__ == '__main__':
         all_labels.extend(pairwise_labels.to(torch.int))
 
 
-
         # clustering
         distances = get_distance_matrix(mention_embeddings, pairwise_scorer)
         predicted = clustering.fit(distances)
@@ -178,14 +168,14 @@ if __name__ == '__main__':
         predicted_clusters = predicted.labels_.reshape(len(predicted_mentions), 1)
         predicted_mentions = np.concatenate((predicted_mentions[:, :-1], predicted_clusters), axis=1)
         topic['mentions'] = predicted_mentions.tolist()
-        #
-        #
+
+
         all_clusters = collections.defaultdict(list)
         for i, cluster_id in enumerate(predicted.labels_):
             all_clusters[cluster_id].append(i)
 
 
-        # hypernyms
+        # hierarchial relations
         if len(np.unique(predicted.labels_)) > 1:
             relations = get_hypernym_relations(topic, all_clusters, hypernym_model)
         else:
@@ -217,8 +207,3 @@ if __name__ == '__main__':
     jsonl_path = os.path.join(config['save_path'], 'system_{}.jsonl'.format(config['threshold']))
     with jsonlines.open(jsonl_path, 'w') as f:
         f.write_all(predicted_data)
-
-    # doc_name = '{}_{}_{}'.format(config['linkage_type'], args.threshold, config['model_num'])
-    # write_output_file(predicted_data, dir_path=config['save_path'], doc_name=doc_name)
-    #
-    # write_connected_components(predicted_data, config['save_path'], doc_name=doc_name)

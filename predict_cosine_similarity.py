@@ -22,11 +22,7 @@ def get_pairwise_scores(span_representations, clusters, pairwise_scorer):
     first, second = zip(*list(combinations(range(len(span_representations)), 2)))
     first, second = torch.tensor(first), torch.tensor(second)
     labels = clusters[first] == clusters[second]
-
-    # scores = torch.ones(len(first), device=device)
-    #
     g1, g2 = span_representations[first], span_representations[second]
-
     scores = pairwise_scorer(g1, g2)
     predictions = (scores > 0.5).to(torch.int)
 
@@ -93,24 +89,10 @@ if __name__ == '__main__':
     predicted_data = []
 
     for topic_num, topic in enumerate(tqdm(data.topics)):
-        # logger.info(f"Processing topic {topic_num}")
         doc_num, docs_embeddings, docs_length = pad_and_read_bert(topic['bert_tokens'], bert_model)
         continuous_embeddings, width, clusters = get_mention_embeddings(topic, docs_embeddings)
-
         mention_embeddings = torch.stack([torch.mean(continous, dim=0) for continous in continuous_embeddings])
         clusters = torch.tensor(clusters, device=device)
-
-
-
-        # pairwise classification
-        # pairwise_predictions, pairwise_labels = get_pairwise_scores(mention_embeddings, clusters, cosine_similarity)
-        # eval = Evaluation(pairwise_predictions, pairwise_labels)
-        #
-        # tp += eval.tp_num
-        # fp += eval.fp_num
-        # fn += eval.fn_num
-
-
 
         # clustering
         distances = get_distance_matrix(mention_embeddings, cosine_similarity)
@@ -137,20 +119,8 @@ if __name__ == '__main__':
             "relations": relations
         })
 
-
-
-
-
-    # recall = tp / (tp + fn) if tp + fn != 0 else 0
-    # precision = tp / (tp + fp) if tp + fp != 0 else 0
-    # f1 = 2 * recall * precision / (precision + recall)
-    # logger.info(f'recall: {round(recall, 2)}, precision: {round(precision, 2)}, f1 {round(f1, 2)}')
-
     logger.info('Saving sys files...')
 
     jsonl_path = os.path.join(args.output_dir, 'system_{}.jsonl'.format(args.threshold))
     with jsonlines.open(jsonl_path, 'w') as f:
         f.write_all(predicted_data)
-
-    # doc_name = '{}_cosine_similarity_{}'.format(args.bert_model.split('/')[-1], args.threshold)
-    # write_output_file(predicted_data, args.save_path, doc_name)

@@ -1,10 +1,10 @@
-gpu_num: [0, 1, 2, 3]
+gpu_num: [0, 1, 2, 3, 4, 5, 6, 7]
 random_seed: 0
 
 #model
 model:
   lr: 0.00001
-  batch_size: 8
+  batch_size: 4
   epochs: 1
   bert_model: allenai/longformer-base-4096
   optimizer: adamw
@@ -14,20 +14,20 @@ model:
 
 # data and model path
 data:
-  training_set: data/train.jsonl
-  dev_set: data/dev.jsonl
-  test_set: data/test.jsonl
+  training_set: data/v3/train.jsonl
+  dev_set: data/v3/dev.jsonl
+  test_set: data/v3/test.jsonl
 
 
-full_doc: false
-model_path: checkpoints
+full_doc: true
+model_path: /net/nfs.cs/s2-research/ariec/scico/models
 log: logs
 
 
 # inference
-checkpoint_multiclass_bi: checkpoints/multiclass/version_2/checkpoints/epoch=0-step=2399.ckpt
-checkpoint_coref: checkpoints/coref/version_1/checkpoints/epoch=0-step=2400.ckpt
-checkpoint_hypernym: checkpoints/hypernym/version_4/checkpoints/epoch=0-step=4801.ckpt
+checkpoint_multiclass: /net/nfs.cs/s2-research/ariec/scico/models/multiclass/version_6/checkpoints/epoch=0-step=2221.ckpt
+checkpoint_coref: /net/nfs.cs/s2-research/ariec/scico/models/coref/version_8/checkpoints/epoch=0-step=2221.ckpt
+checkpoint_hypernym: /net/nfs.cs/s2-research/ariec/scico/models/hypernym/version_5/checkpoints/epoch=0-step=4443.ckpt
 agg_threshold: 0.6  # for agglomerative clustering
 hypernym_threshold: 0.4 # for hypernym scores
-save_path: checkpoints/multiclass/version_2
+save_path: /net/nfs.cs/s2-research/ariec/scico/models/coref/version_8

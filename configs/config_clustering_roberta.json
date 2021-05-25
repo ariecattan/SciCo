@@ -15,12 +15,12 @@
   "keep_singletons": true,
 
   "topic_level": true,
-  "data_path": "data/final/test.jsonl",
+  "data_path": "data/v3/test.jsonl",
 
 
-  "save_path": "checkpoints/sci_model_final/roberta-large/",
-  "model_path" : "checkpoints/sci_model_final/roberta-large/model",
-  "model_num": 1,
+  "save_path": "checkpoints/sci_model/roberta-large",
+  "model_path" : "checkpoints/sci_model/roberta-large/model",
+  "model_num": 4,
 
   "linkage_type": "average",
   "threshold": 0.6

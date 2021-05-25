@@ -8,9 +8,17 @@ import jsonlines
 
 
 
+
+
 class CrossEncoderDataset(data.Dataset):
-    def __init__(self, data_path, full_doc=True, multiclass='multiclass', sep_token='</s>', is_training=True):
+    def __init__(self, data_path,
+                 full_doc=True,
+                 multiclass='multiclass',
+                 sep_token='</s>',
+                 is_training=True,
+                 cdlm=False):
         super(CrossEncoderDataset, self).__init__()
+
         with jsonlines.open(data_path, 'r') as f:
             self.data = [topic for topic in f]
 
@@ -19,6 +27,7 @@ class CrossEncoderDataset(data.Dataset):
                                                    for start, end, _ in topic['flatten_mentions']])
 
         self.sep = sep_token
+        self.cdlm = cdlm
         self.full_doc = full_doc
         if multiclass not in {'coref', 'hypernym', 'multiclass'}:
             raise ValueError(f"The multiclass value needs to be in (coref, hypernym, multiclass), got {multiclass}.")
@@ -124,6 +133,9 @@ class CrossEncoderDataset(data.Dataset):
         return inputs, labels, list(zip(first, second))
 
 
+
+
+
     def get_topic_pairs(self, topic):
         '''
         :param topic:
@@ -162,9 +174,15 @@ class CrossEncoderDataset(data.Dataset):
 
     def get_full_doc_mention(self, mention, tokens):
         doc_id, start, end, _ = mention
+
+
         mention_rep = tokens[doc_id][:start] + ['<m>']
         mention_rep += tokens[doc_id][start:end + 1] + ['</m>']
-        mention_rep += tokens[doc_id][end + 1:]
+        mention_rep += tokens[doc_id][end + 1:] + [self.sep]
+
+        if self.cdlm:
+            mention_rep = ['<doc-s>'] + mention_rep + ['</doc-s>']
+
         return ' '.join(mention_rep)
 
 
@@ -183,6 +201,9 @@ class CrossEncoderDataset(data.Dataset):
         mention_rep = tokens[doc_id][sent_start:start] + ['<m>']
         mention_rep += tokens[doc_id][start:end + 1] + ['</m>']
         mention_rep += tokens[doc_id][end + 1:sent_end] + [self.sep]
+
+        if self.cdlm:
+            mention_rep = ['<doc-s>'] + mention_rep + ['</doc-s>']
 
         return ' '.join(mention_rep)
 

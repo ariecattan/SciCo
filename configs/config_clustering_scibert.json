@@ -1,5 +1,5 @@
 {
-  "gpu_num" : [3],
+  "gpu_num" : [1],
 
   "bert_model": "allenai/scibert_scivocab_uncased",
   "nli_model": "roberta-large-mnli",
@@ -15,12 +15,12 @@
   "keep_singletons": true,
 
   "topic_level": true,
-  "data_path": "data/final/test.jsonl",
+  "data_path": "data/v3/test.jsonl",
 
 
-  "save_path": "checkpoints/sci_model_final/scibert",
-  "model_path" : "checkpoints/sci_model_final/scibert/model",
-  "model_num": 2,
+  "save_path": "checkpoints/sci_model/scibert",
+  "model_path" : "checkpoints/sci_model/scibert/model",
+  "model_num": 0,
 
   "linkage_type": "average",
   "threshold": 0.6

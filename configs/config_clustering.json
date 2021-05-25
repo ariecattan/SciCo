@@ -15,13 +15,13 @@
   "keep_singletons": true,
 
   "topic_level": true,
-  "data_path": "data/final/test.jsonl",
+  "data_path": "data/v3/test.jsonl",
 
 
-  "save_path": "checkpoints/baselines/ecb_model/test_final",
-  "model_path" : "checkpoints/baselines/ecb_model/model",
-  "model_num": 2,
+  "save_path": "checkpoints/baselines/cd2cr_ca_v",
+  "model_path" : "checkpoints/baselines/cd2cr_ca_v/model",
+  "model_num": 7,
 
   "linkage_type": "average",
-  "threshold": 0.65
+  "threshold": 0.7
 }

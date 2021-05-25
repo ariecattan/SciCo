@@ -1,6 +1,6 @@
 import collections
 import networkx as nx
-from itertools import product
+from itertools import product, combinations
 from scipy import stats
 import numpy as np
 from itertools import chain
@@ -38,39 +38,22 @@ class ShortestPath:
 
         self.micro_average = self.compute_micro_average_scores()
         self.macro_average = self.compute_macro_average_score()
-        # self.all_scores = self.compute_all_scores()
 
 
     def get_graph(self, topic):
         clusters = [x[-1] for x in topic['mentions']]
         relations = topic['relations']
 
-        cluster_dic = collections.defaultdict(list)
-        for i, cluster in enumerate(clusters):
-            cluster_dic[cluster].append(i)
-
-        edges = []
-        for x, y in relations:
-            parents = cluster_dic[x]
-            children = cluster_dic[y]
-            edges.extend([(p, c) for p in parents for c in children])
-
-        if self.directed:
-            graph = nx.DiGraph(directed=True)
-        else:
-            graph = nx.Graph()
-
-        graph.add_nodes_from(list(range(len(topic['mentions']))))
-        graph.add_edges_from(edges)
-
+        graph = nx.DiGraph()
+        graph.add_nodes_from(set(clusters))
+        graph.add_edges_from(relations)
         return graph
-
 
     def get_distance(self, graph, clusters, x, y):
         if clusters[x] == clusters[y]:
             return 1
-        elif nx.has_path(graph, x, y):
-            return nx.shortest_path_length(graph, x, y) + 1
+        elif nx.has_path(graph, clusters[x], clusters[y]):
+            return nx.shortest_path_length(graph, clusters[x], clusters[y]) + 1
         else:
             return 0
 
@@ -79,6 +62,7 @@ class ShortestPath:
         if n == 0 and d == 0:
             return (1, self.with_tn)
         return (n / d, True)
+
 
 
     def get_topic_score(self, topic_gold, topic_system):
@@ -97,7 +81,7 @@ class ShortestPath:
             gold_distance = self.get_distance(gold_graph, gold_clusters, x, y)
             sys_distance = self.get_distance(sys_graph, sys_clusters, x, y)
             pair_score = self.safe_division(min(gold_distance, sys_distance),
-                                       max(gold_distance, sys_distance))
+                                            max(gold_distance, sys_distance))
 
             if pair_score[1]:
                 gold_scores.append(gold_distance)
@@ -107,7 +91,6 @@ class ShortestPath:
 
         self.all_scores[self.topic] = numerator / denominator
 
-
         return numerator, denominator, gold_scores, sys_scores
 
 
@@ -116,11 +99,9 @@ class ShortestPath:
         return sum(self.numerator) / sum(self.denominator)
 
 
-    def compute_all_scores(self):
-        return [x / y for x, y in zip(self.numerator, self.denominator)]
-
     def compute_macro_average_score(self):
         return np.average([ x/y if y != 0 else 0 for x, y in zip(self.numerator, self.denominator)])
+
 
 
 

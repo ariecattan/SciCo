@@ -25,18 +25,14 @@ def init_models(config, device, model_num):
                                                       "span_repr_{}".format(model_num)),
                                          map_location=device))
     span_repr.eval()
-    span_scorer = SpanScorer(config).to(device)
-    # span_scorer.load_state_dict(torch.load(os.path.join(config['model_path'],
-    #                                                     "span_scorer_{}".format(model_num)),
-    #                                        map_location=device))
-    span_scorer.eval()
+
     pairwise_scorer = SimplePairWiseClassifier(config).to(device)
     pairwise_scorer.load_state_dict(torch.load(os.path.join(config['model_path'],
                                                            "pairwise_scorer_{}".format(model_num)),
                                               map_location=device))
     pairwise_scorer.eval()
 
-    return span_repr, span_scorer, pairwise_scorer
+    return span_repr, pairwise_scorer
 
 
 def predict_topic(topic):
@@ -115,28 +111,26 @@ if __name__ == '__main__':
         clustering.append(agglo)
 
 
+    save_path = os.path.join(config['save_path'], 'dev')
+
     for num in range(5):
         logger.info('Model {}'.format(num))
         if not cosine:
-            span_repr, span_scorer, pairwise_scorer = init_models(config, device, num)
+            span_repr, pairwise_scorer = init_models(config, device, num)
         predicted_data = collections.defaultdict(list)
 
         for topic_num, topic in enumerate(tqdm(data.topics)):
-
-
             if cosine:
                 distance_matrix = predict_topic_cosine_similarity(topic)
             else:
                 distance_matrix = predict_topic(topic)
 
             for i, agglomerative in enumerate(clustering):
-
                 predicted = agglomerative.fit(distance_matrix)
                 predicted_mentions = np.array(topic['mentions'])
                 predicted_clusters = predicted.labels_.reshape(len(predicted_mentions), 1)
                 predicted_mentions = np.concatenate((predicted_mentions[:, :-1], predicted_clusters), axis=1)
                 topic['mentions'] = predicted_mentions.tolist()
-            #
 
                 predicted_data[agglomerative.distance_threshold].append({
                     "id": topic['id'],
@@ -145,8 +139,6 @@ if __name__ == '__main__':
                     "relations": []
                 })
 
-
         for threshold, topics in predicted_data.items():
             doc_name = 'dev_{}_{}_{}'.format(config['linkage_type'], threshold, num)
-            write_output_file(topics, dir_path=config['save_path'], doc_name=doc_name)
-
+            write_output_file(topics, dir_path=save_path, doc_name=doc_name)

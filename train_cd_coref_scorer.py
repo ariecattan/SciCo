@@ -122,9 +122,6 @@ if __name__ == '__main__':
     span_repr = SpanEmbedder(config, device).to(device)
     pairwise_model = SimplePairWiseClassifier(config).to(device)
 
-    if config['training_method'] == "fine-tune":
-        span_repr.load_state_dict(torch.load(config['span_repr_path'], map_location=device))
-        pairwise_model.load_state_dict(torch.load(config['pairwise_scorer_path'], map_location=device))
 
 
     ## Optimizer and loss function
@@ -140,23 +137,14 @@ if __name__ == '__main__':
     f1 = []
     for epoch in range(config['epochs']):
         logger.info('Epoch: {}'.format(epoch))
-
         pairwise_model.train()
         span_repr.train()
 
         accumulate_loss = 0
-        # list_of_topics = shuffle(list(range(len(train.topics))))
-        # list_of_topics = list(range(len(train.topics)))
         total_number_of_pairs = 0
         for topic_num, topic in enumerate(tqdm(train.topics)):
             doc_num, docs_embeddings, docs_length = pad_and_read_bert(topic['bert_tokens'], bert_model)
             continuous_embeddings, width, clusters = get_mention_embeddings(topic, docs_embeddings)
-
-
-            #sanity check
-            if min([len(x) for x in continuous_embeddings]) == 0:
-                continue
-
             start_end = torch.stack([torch.cat((mention[0], mention[-1])) for mention in continuous_embeddings])
             width = torch.tensor(width, device=device)
             clusters = torch.tensor(clusters, device=device)
@@ -176,38 +164,37 @@ if __name__ == '__main__':
         logger.info('Accumulate loss: {}'.format(accumulate_loss))
 
 
-        # logger.info('Evaluate on the dev set')
-        # span_repr.eval()
-        # pairwise_model.eval()
-        # all_scores, all_labels = [], []
-        #
-        # for topic_num, topic in enumerate(tqdm(dev.topics)):
-        #     topic = dev.topics[topic_num]
-        #     doc_num, docs_embeddings, docs_length = pad_and_read_bert(topic['bert_tokens'], bert_model)
-        #     continuous_embeddings, width, clusters = get_mention_embeddings(topic, docs_embeddings)
-        #     start_end = torch.stack([torch.cat((mention[0], mention[-1])) for mention in continuous_embeddings])
-        #     width = torch.tensor(width, device=device)
-        #     clusters = torch.tensor(clusters, device=device)
-        #
-        #     with torch.no_grad():
-        #         mention_embeddings = span_repr(start_end, continuous_embeddings, width)
-        #
-        #     pairwise_predictions, pairwise_labels = get_pairwise_scores(mention_embeddings, clusters, pairwise_model)
-        #     # eval = Evaluation(pairwise_predictions, pairwise_labels)
-        #     all_scores.extend(pairwise_predictions.squeeze(1))
-        #     all_labels.extend(pairwise_labels.to(torch.int))
-        #
-        # all_labels = torch.stack(all_labels)
-        # all_scores = torch.stack(all_scores)
-        #
-        #
-        # strict_preds = (all_scores > 0).to(torch.int)
-        # eval = Evaluation(strict_preds, all_labels.to(device))
-        # logger.info('Number of predictions: {}/{}'.format(strict_preds.sum(), len(strict_preds)))
-        # logger.info('Number of positive pairs: {}/{}'.format(len(torch.nonzero(all_labels == 1)),
-        #                                                      len(all_labels)))
-        # logger.info('Strict - Recall: {}, Precision: {}, F1: {}'.format(eval.get_recall(),
-        #                                                                 eval.get_precision(), eval.get_f1()))
-        # f1.append(eval.get_f1())
+        logger.info('Evaluate on the dev set')
+        span_repr.eval()
+        pairwise_model.eval()
+        all_scores, all_labels = [], []
+
+        for topic_num, topic in enumerate(tqdm(dev.topics)):
+            topic = dev.topics[topic_num]
+            doc_num, docs_embeddings, docs_length = pad_and_read_bert(topic['bert_tokens'], bert_model)
+            continuous_embeddings, width, clusters = get_mention_embeddings(topic, docs_embeddings)
+            start_end = torch.stack([torch.cat((mention[0], mention[-1])) for mention in continuous_embeddings])
+            width = torch.tensor(width, device=device)
+            clusters = torch.tensor(clusters, device=device)
+
+            with torch.no_grad():
+                mention_embeddings = span_repr(start_end, continuous_embeddings, width)
+
+            pairwise_predictions, pairwise_labels = get_pairwise_scores(mention_embeddings, clusters, pairwise_model)
+            all_scores.extend(pairwise_predictions.squeeze(1))
+            all_labels.extend(pairwise_labels.to(torch.int))
+
+        all_labels = torch.stack(all_labels)
+        all_scores = torch.stack(all_scores)
+
+
+        strict_preds = (all_scores > 0).to(torch.int)
+        eval = Evaluation(strict_preds, all_labels.to(device))
+        logger.info('Number of predictions: {}/{}'.format(strict_preds.sum(), len(strict_preds)))
+        logger.info('Number of positive pairs: {}/{}'.format(len(torch.nonzero(all_labels == 1)),
+                                                             len(all_labels)))
+        logger.info('Strict - Recall: {}, Precision: {}, F1: {}'.format(eval.get_recall(),
+                                                                        eval.get_precision(), eval.get_f1()))
+        f1.append(eval.get_f1())
         torch.save(span_repr.state_dict(), os.path.join(config['model_path'], 'span_repr_{}'.format(epoch)))
         torch.save(pairwise_model.state_dict(), os.path.join(config['model_path'], 'pairwise_scorer_{}'.format(epoch)))

@@ -15,7 +15,7 @@ import numpy as np
 import collections
 from itertools import product
 
-from models.datasets import MentionPairsDataset
+from models.datasets import CrossEncoderDataset
 from models.muticlass import MulticlassBiEncoder, MulticlassCrossEncoder, BinaryCorefCrossEncoder, HypernymCrossEncoder
 from utils.model_utils import get_greedy_relations, get_hypernym_relations
 from models.baselines import EntailmentModel
@@ -25,7 +25,7 @@ class MulticlassInference:
     def __init__(self, dataset, pairwise_scores, coref_threshold, hypernym_threshold):
         self.dataset = dataset
         self.info_pairs = torch.tensor(dataset.info_pairs)
-        self.pairwise_scores = pairwise_scores
+        self.pairwise_scores = pairwise_scores.cpu()
         self.coref_threshold = coref_threshold
         self.hypernym_threshold = hypernym_threshold
 
@@ -135,8 +135,6 @@ class MulticlassInference:
 
         predicted_data = []
         for topic, (topic_pair, topic_scores) in enumerate(tqdm(zip(all_pairs, all_scores), total=len(all_scores))):
-            # if topic == 44:
-            #     print('BUGGG')
             data = self.get_topic_prediction(topic, topic_pair, topic_scores)
             predicted_data.append(data)
 
@@ -283,16 +281,10 @@ class HypernymInference:
 
 
 
-def predict_multiclass(config, method, trainer):
+def predict_multiclass(config, trainer):
     logger.info('Predicting multiclass scores')
-
-    if method == 'cross':
-        model = MulticlassCrossEncoder.load_from_checkpoint(config['checkpoint_multiclass_cross'], config=config)
-    else:
-        model = MulticlassBiEncoder.load_from_checkpoint(config['checkpoint_multiclass_bi'], config=config)
-
-
-    test = MentionPairsDataset(config["data"]["test_set"],
+    model = MulticlassCrossEncoder.load_from_checkpoint(config['checkpoint_multiclass'], config=config)
+    test = CrossEncoderDataset(config["data"]["test_set"],
                                full_doc=config['full_doc'],
                                multiclass=model_name,
                                is_training=False)
@@ -304,8 +296,8 @@ def predict_multiclass(config, method, trainer):
                                   pin_memory=True)
     results = trainer.predict(model, dataloaders=test_loader)
     results = torch.cat([torch.tensor(x) for x in results])
-    torch.save(results, 'checkpoints/multiclass/multiclass_results.pt')
-    # results = torch.load('test_multiclass_results.pt')
+    # torch.save(results, os.path.join(config['save_path'], 'test_muticlass_results.pt'))
+    # results = torch.load(os.path.join(config['save_path'], 'test_muticlass_results.pt'))
     inference = MulticlassInference(test, results, config['agg_threshold'], config['hypernym_threshold'])
     inference.predict_cluster_relations()
     inference.save_predicted_file(config['save_path'])
@@ -315,22 +307,24 @@ def predict_multiclass(config, method, trainer):
 def predict_pipeline(config, trainer):
     coref_model = BinaryCorefCrossEncoder.load_from_checkpoint(config['checkpoint_coref'], config=config)
     hypernym_model = HypernymCrossEncoder.load_from_checkpoint(config['checkpoint_hypernym'], config=config)
-    test_coref = MentionPairsDataset(config["data"]["test_set"],
+
+
+    test_coref = CrossEncoderDataset(config["data"]["test_set"],
                                      full_doc=config['full_doc'],
                                      multiclass='coref',
                                      is_training=False)
     test_coref_loader = data.DataLoader(test_coref,
-                                        batch_size=config['model']['batch_size'] * 64,
+                                        batch_size=config['model']['batch_size'] * 64 * 4,
                                         shuffle=False,
                                         collate_fn=coref_model.tokenize_batch,
                                         num_workers=16,
                                         pin_memory=True)
-    test_hypernym = MentionPairsDataset(config["data"]["test_set"],
+    test_hypernym = CrossEncoderDataset(config["data"]["test_set"],
                                         full_doc=config['full_doc'],
                                         multiclass='hypernym',
                                         is_training=False)
     test_hypernym_loader = data.DataLoader(test_hypernym,
-                                           batch_size=config['model']['batch_size'] * 32,
+                                           batch_size=config['model']['batch_size'] * 64 * 4,
                                            shuffle=False,
                                            collate_fn=hypernym_model.tokenize_batch,
                                            num_workers=16,
@@ -339,7 +333,7 @@ def predict_pipeline(config, trainer):
     logger.info('Predicting coreference scores')
     coref_results = trainer.predict(coref_model, dataloaders=test_coref_loader)
     coref_results = torch.cat([torch.tensor(x) for x in coref_results])
-    torch.save(coref_results, 'checkpoints/coref/coref_results.pt')
+    # torch.save(coref_results, 'checkpoints/coref/coref_results.pt')
     # coref_results = torch.load('checkpoints/coref_results.pt')
     coref_inference = BinaryCoreferenceInference(test_coref, coref_results, config['agg_threshold'])
     coref_inference.fit()
@@ -348,7 +342,7 @@ def predict_pipeline(config, trainer):
     logger.info('Predicting hypernym scores')
     hypernym_results = trainer.predict(hypernym_model, dataloaders=test_hypernym_loader)
     hypernym_results = torch.cat([torch.tensor(x) for x in hypernym_results])
-    torch.save(hypernym_results, 'checkpoints/hypernym/hypernym_results.pt')
+    # torch.save(hypernym_results, 'checkpoints/hypernym/hypernym_results.pt')
     # hypernym_results = torch.load('checkpoints/hypernym_results.pt')
     hypernym_inference = HypernymInference(test_hypernym, predicted_data, hypernym_results,
                                            config['hypernym_threshold'])
@@ -367,19 +361,25 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='configs/multiclass.yaml')
     parser.add_argument('--multiclass', type=str, default='pipeline')
-    parser.add_argument('--method', type=str, default='cross', help='cross-encoder or bi-encoder')
+    parser.add_argument('--full_doc', type=str, default='0')
+    parser.add_argument('--model_path', type=str, default='')
+    parser.add_argument('--bert_model', type=str, default='')
+    parser.add_argument('--save_path', type=str, default='')
+
+
     args = parser.parse_args()
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
 
     model_name = args.multiclass
-    method = args.method
+
+    config['save_path'] = args.save_path if args.save_path != '' else config['save_path']
+    config['model']['bert_model'] = args.bert_model if args.bert_model != '' else config['model']['bert_model']
+    config['full_doc'] = False if args.full_doc == '0' else True
 
     if model_name not in {'pipeline', 'multiclass'}:
         raise ValueError(f"The multiclass value needs to be in (multiclass, pipeline), got {model_name}.")
 
-    if method not in {'bi', 'cross'}:
-        raise ValueError(f"The training method needs to be in (bi, cross), got {method}.")
 
     root_logger = logging.getLogger()
     logger = root_logger.getChild(__name__)
@@ -399,28 +399,18 @@ if __name__ == '__main__':
     if not os.path.exists(config['save_path']):
         os.makedirs(config['save_path'])
 
-    logger.info(f"Using {model_name} {method} model")
+    logger.info(f"Using {model_name}")
     logger.info('loading models')
     pl_logger = CSVLogger(save_dir='logs', name='multiclass_inference')
     trainer = pl.Trainer(gpus=config['gpu_num'], accelerator='dp', logger=pl_logger)
 
-
-
-
-
-
     #### multiclass
     if model_name == 'multiclass':
-        predict_multiclass(config, method, trainer)
+        if args.model_path != '':
+            config['checkpoint_multiclass'] = args.model_path
+        predict_multiclass(config, trainer)
 
     else:
         predict_pipeline(config, trainer)
 
 
-        # logger.info('Predicting relations between clusters')
-        # entailment_model = EntailmentModel(config['nli_model'], device=config['gpu_num'][0])
-        # entailment_inference = EntailmentInference(test, data, entailment_model=entailment_model)
-        #
-        # jsonl_path = os.path.join(config['save_path'], 'system_{}.jsonl'.format(config['agg_threshold']))
-        # with jsonlines.open(jsonl_path, 'w') as f:
-        #     f.write_all(entailment_inference.predicted_data)

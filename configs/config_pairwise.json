@@ -1,6 +1,6 @@
 {
-  "gpu_num" : [0],
-  "bert_model": "allenai/cs_roberta_base",
+  "gpu_num" : [1],
+  "bert_model": "allenai/scibert_scivocab_uncased",
   "bert_hidden_size": 768,
   "hidden_layer": 768,
   "dropout": 0.3,
@@ -20,7 +20,7 @@
   "neg_samp": true,
 
   "log_path": "logs/pairwise_scorer/",
-  "training_set": "data/final/train.jsonl",
-  "dev_set": "data/final/dev.jsonl",
-  "model_path": "checkpoints/sci_model_final/cs_roberta/model"
+  "training_set": "data/v3/train.jsonl",
+  "dev_set": "data/v3/dev.jsonl",
+  "model_path": "checkpoints/sci_model/scibert/model"
 }

@@ -10,23 +10,24 @@ import os
 import torch
 from tqdm import tqdm
 import numpy as np
-from models.datasets import CrossEncoderDataset, BiEncoderDataset
-from models.muticlass import MulticlassBiEncoder, MulticlassCrossEncoder
+from models.datasets import CrossEncoderDataset
+from models.muticlass import MulticlassCrossEncoder
 from predict import MulticlassInference
 
 from eval.shortest_path import ShortestPath
-from eval.hypernym import HypernymScore
-from evaluate import get_coref_scores
+
 
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='configs/multiclass.yaml')
-    parser.add_argument('--method', type=str, default='cross', help='cross-encoder or bi-encoder')
+    parser.add_argument('--full_doc', type=str, default='1')
     args = parser.parse_args()
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
+
+    config['full_doc'] = False if args.full_doc == '0' else True
 
     root_logger = logging.getLogger()
     logger = root_logger.getChild(__name__)
@@ -39,7 +40,6 @@ if __name__ == '__main__':
         config['log'], '{}.txt'.format(datetime.now().strftime("%Y_%m_%d_%H_%M_%S"))))
     file_handler.setLevel(logging.INFO)
     file_handler.setFormatter(formatter)
-    # root_logger.addHandler(file_handler)
     logger.info("pid: {}".format(os.getpid()))
     logger.info('Server name: {}'.format(socket.gethostname()))
 
@@ -49,19 +49,10 @@ if __name__ == '__main__':
 
 
     logger.info('loading models')
-    if args.method == 'cross':
-        model = MulticlassCrossEncoder.load_from_checkpoint(config['checkpoint_multiclass_cross'], config=config)
-    else:
-        model = MulticlassBiEncoder.load_from_checkpoint(config['checkpoint_multiclass_bi'], config=config)
-
-    logger.info('Loading data')
-    if args.method == 'cross':
-        dev = CrossEncoderDataset(config["data"]["dev_set"], full_doc=config['full_doc'], multiclass='multiclass')
-    else:
-        dev = BiEncoderDataset(config["data"]["dev_set"], full_doc=config['full_doc'], multiclass='multiclass')
-
+    model = MulticlassCrossEncoder.load_from_checkpoint(config['checkpoint_multiclass'], config=config)
+    dev = CrossEncoderDataset(config["data"]["dev_set"], full_doc=config['full_doc'], multiclass='multiclass')
     dev_loader = data.DataLoader(dev,
-                                  batch_size=config["model"]["batch_size"] * 64,
+                                  batch_size=config["model"]["batch_size"] * 64 * 4,
                                   shuffle=False,
                                   collate_fn=model.tokenize_batch,
                                   num_workers=16,
@@ -71,8 +62,7 @@ if __name__ == '__main__':
     trainer = pl.Trainer(gpus=config['gpu_num'], accelerator='dp')
     results = trainer.predict(model, dataloaders=dev_loader)
     results = torch.cat([torch.tensor(x) for x in results])
-    torch.save(results, 'checkpoints/multiclass/dev_results.pt')
-
+    # torch.save(results, os.path.join(config['save_path'], 'dev_results.pt'))
     # results = torch.load('checkpoints/multiclass/dev_results.pt')
     coref_threshold = np.arange(0.4, 0.61, 0.1)
     hypernym_threshold = np.arange(0.4, 0.61, 0.1)

@@ -1,5 +1,5 @@
 {
-  "gpu_num" : [0],
+  "gpu_num" : [2],
 
   "bert_model": "allenai/cs_roberta_base",
   "nli_model": "roberta-large-mnli",
@@ -15,12 +15,12 @@
   "keep_singletons": true,
 
   "topic_level": true,
-  "data_path": "data/final/test.jsonl",
+  "data_path": "data/v3/test.jsonl",
 
 
-  "save_path": "checkpoints/sci_model_final/cs_roberta",
-  "model_path" : "checkpoints/sci_model_final/cs_roberta/model",
-  "model_num": 1,
+  "save_path": "checkpoints/sci_model/cs_roberta",
+  "model_path" : "checkpoints/sci_model/cs_roberta/model",
+  "model_num": 3,
 
   "linkage_type": "average",
   "threshold": 0.6

@@ -4,9 +4,9 @@ import os
 
 
 from eval.hypernym import HypernymScore
+from eval.hypernym_50 import HypernymScore50
 from eval.shortest_path import ShortestPath
-from eval.stat_metrics import AUC
-from utils.conll import write_output_file, write_connected_components
+from utils.conll import write_output_file
 from coval.coval.conll import reader
 from coval.coval.eval import evaluator
 
@@ -46,18 +46,14 @@ def get_coref_scores(gold, system):
 
     write_output_file(gold, output_path, 'gold')
     write_output_file(system, output_path, 'system')
-
-    write_connected_components(gold, output_path, 'gold')
-    write_connected_components(system, output_path, 'system')
-
     coref_scores = eval_coref('tmp/gold_simple.conll', 'tmp/system_simple.conll')
-    connected_scores = eval_coref('tmp/gold_connected.conll', 'tmp/system_connected.conll')
 
-    return coref_scores, connected_scores
-
+    return coref_scores
 
 
-def main():
+
+
+if __name__ == '__main__':
     gold_path = sys.argv[1]
     sys_path = sys.argv[2]
     hard = sys.argv[3] if len(sys.argv) > 3 else None
@@ -72,9 +68,9 @@ def main():
         gold = [topic for topic in gold if topic[hard] == True]
         system = [topic for topic in system if topic['id'] in [x['id'] for x in gold]]
 
-    print(len(gold))
+    print(f'Number of topics to evaluate {len(gold)}')
 
-    coref, connected = get_coref_scores(gold, system)
+    coref = get_coref_scores(gold, system)
     print('Coref metrics')
     for metric, scores in coref.items():
         if metric != 'conll':
@@ -91,18 +87,12 @@ def main():
           ' F1: %.2f' % (hypernyms.micro_f1 * 100))
 
 
+    hypernym_50 = HypernymScore50(gold, system)
+    print('Hierarchy 50%'.ljust(15), 'Recall: %.2f' % (hypernym_50.micro_recall * 100),
+         ' Precision: %.2f' % (hypernym_50.micro_precision * 100),
+         ' F1: %.2f' % (hypernym_50.micro_f1 * 100))
 
-    path_based_3 = ShortestPath(gold, system, directed=True, with_tn=False)
+    path_ratio = ShortestPath(gold, system, directed=True, with_tn=False)
     print('Path Ratio'.ljust(15),
-          'Micro: %.2f' % (path_based_3.micro_average * 100),
-          'Macro: %.2f' % (path_based_3.macro_average * 100))
-
-
-    auc = AUC(gold, system)
-    print('AUROC'.ljust(15),
-          '%.2f' % (auc.score * 100))
-
-
-
-if __name__ == '__main__':
-    main()
+          'Micro Average: %.2f' % (path_ratio.micro_average * 100),
+          'Macro: %.2f' % (path_ratio.macro_average * 100))
