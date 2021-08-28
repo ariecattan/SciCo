@@ -5,18 +5,19 @@ This repository contains the data and code for the paper:
 
 [SciCo: Hierarchical Cross-Document Coreference for Scientific Concepts](https://arxiv.org/abs/2104.08809) \
 *Arie Cattan, Sophie Johnson, Daniel S. Weld, Ido Dagan, Iz Beltagy, Doug Downey and Tom Hope* \
-2021 
+AKBC 2021. 
 
 Check out our [website](https://scico.apps.allenai.org/)!
 
 
 ```
-@article{Cattan2021SciCoHC,
+@inproceedings{
+    anonymous2021scico,
     title={SciCo: Hierarchical Cross-Document Coreference for Scientific Concepts},
     author={Arie Cattan and Sophie Johnson and Daniel S. Weld and Ido Dagan and Iz Beltagy and Doug Downey and Tom Hope},
-    journal={ArXiv},
+    booktitle={3rd Conference on Automated Knowledge Base Construction},
     year={2021},
-    volume={abs/2104.08809}
+    url={https://openreview.net/forum?id=OFLbgUP04nC}
 }
 ```
 
