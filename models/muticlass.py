@@ -98,8 +98,8 @@ class MulticlassCrossEncoder(pl.LightningModule):
         x, y = batch
         input_ids, attention_mask, global_attention_mask = x
         y_hat = self(input_ids, attention_mask, global_attention_mask)
-        y_hat = torch.softmax(y_hat, dim=1)
         loss = self.criterion(y_hat, y)
+        y_hat = torch.softmax(y_hat, dim=1)
         self.compute_metrics(y_hat, y)
         self.log('val_loss', loss, on_epoch=True, on_step=False)
 
@@ -114,8 +114,8 @@ class MulticlassCrossEncoder(pl.LightningModule):
         x, y = batch
         input_ids, attention_mask, global_attention_mask = x
         y_hat = self(input_ids, attention_mask, global_attention_mask)
-        y_hat = torch.softmax(y_hat, dim=1)
         loss = self.criterion(y_hat, y)
+        y_hat = torch.softmax(y_hat, dim=1)
 
         return {
             'loss': loss,
@@ -394,8 +394,8 @@ class HypernymCrossEncoder(pl.LightningModule):
         x, y = batch
         input_ids, attention_mask, global_attention_mask = x
         y_hat = self(input_ids, attention_mask, global_attention_mask)
-        y_hat = torch.softmax(y_hat, dim=1)
         loss = self.criterion(y_hat, y)
+        y_hat = torch.softmax(y_hat, dim=1)
         self.compute_metrics(y_hat, y)
         self.log('val_loss', loss, on_epoch=True, on_step=False)
 
@@ -410,8 +410,8 @@ class HypernymCrossEncoder(pl.LightningModule):
         x, y = batch
         input_ids, attention_mask, global_attention_mask = x
         y_hat = self(input_ids, attention_mask, global_attention_mask)
-        y_hat = torch.softmax(y_hat, dim=1)
         loss = self.criterion(y_hat, y)
+        y_hat = torch.softmax(y_hat, dim=1)
 
         return {
             'loss': loss,
@@ -527,7 +527,6 @@ class MulticlassBiEncoder(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         m1, m2, y = batch
         y_hat = self(m1, m2)
-        y_hat = torch.softmax(y_hat, dim=1)
         loss = self.criterion(y_hat, y)
         self.compute_metrics(y_hat, y)
         self.log('val_loss', loss, on_epoch=True, on_step=False)
