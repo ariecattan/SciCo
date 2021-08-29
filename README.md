@@ -12,7 +12,7 @@ Check out our [website](https://scico.apps.allenai.org/)!
 
 ```
 @inproceedings{
-    scico2021,
+    cattan2021scico,
     title={SciCo: Hierarchical Cross-Document Coreference for Scientific Concepts},
     author={Arie Cattan and Sophie Johnson and Daniel S. Weld and Ido Dagan and Iz Beltagy and Doug Downey and Tom Hope},
     booktitle={3rd Conference on Automated Knowledge Base Construction},
