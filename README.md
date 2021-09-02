@@ -25,9 +25,14 @@ Check out our [website](https://scico.apps.allenai.org/)!
 
 ## Dataset
 
+You can load SciCo directly from [huggingface.co/datasets/allenai/scico](https://huggingface.co/datasets/allenai/scico) as follows:
 
+```python
+from datasets import load_dataset
+scico = load_dataset("allenai/scico")
+```
 
-Click [here](https://nlp.biu.ac.il/~ariecattan/scico/data.tar) to download SciCo.
+To download the raw data, click [here](https://nlp.biu.ac.il/~ariecattan/scico/data.tar).
 
 Each file (train, dev, test) is in the `jsonl` format where each row corresponds a topic.
 See below the description of the fields in each topic.
