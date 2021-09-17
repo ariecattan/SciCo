@@ -65,7 +65,7 @@ tokenizer = AutoTokenizer.from_pretrained('allenai/longformer-scico')
 model = AutoModelForSequenceClassification.from_pretrained('allenai/longformer-scico')
 
 start_token = tokenizer.convert_tokens_to_ids("<m>")
-end_token = tokenizer.convert_tokens_to_aids("</m>")
+end_token = tokenizer.convert_tokens_to_ids("</m>")
 
 def get_global_attention(input_ids):
     global_attention_mask = torch.zeros(input_ids.shape)
