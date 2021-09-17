@@ -82,7 +82,7 @@ m2 = "This task is important since many natural language processing (NLP) proble
 
 inputs = m1 + " </s></s> " + m2  
 
-tokens = tokenzier(inputs, return_tensors='pt')
+tokens = tokenizer(inputs, return_tensors='pt')
 global_attention_mask = get_global_attention(tokens['input_ids'])
 
 with torch.no_grad():
