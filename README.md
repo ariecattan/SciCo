@@ -50,7 +50,55 @@ See below the description of the fields in each topic.
 * `source`: source of this topic PapersWithCode (pwc), hypernym or curated. 
 
 
-## Models and Evaluation 
+## Model
+
+Our unified model is available on https://huggingface.co/allenai/longformer-scico.
+We provide the following code as an example to set the global attention on the special tokens: `<s>`, `<m>` and `</m>`.
+
+ 
+
+```python
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+
+tokenizer = AutoTokenizer.from_pretrained('allenai/longformer-scico')
+model = AutoModelForSequenceClassification.from_pretrained('allenai/longformer-scico')
+
+start_token = tokenizer.convert_tokens_to_ids("<m>")
+end_token = tokenizer.convert_tokens_to_aids("</m>")
+
+def get_global_attention(input_ids):
+    global_attention_mask = torch.zeros(input_ids.shape)
+    global_attention_mask[:, 0] = 1  # global attention to the CLS token
+    start = torch.nonzero(input_ids == start_token) # global attention to the <m> token
+    end = torch.nonzero(input_ids == end_token) # global attention to the </m> token
+    globs = torch.cat((start, end))
+    value = torch.ones(globs.shape[0])
+    global_attention_mask.index_put_(tuple(globs.t()), value)
+    return global_attention_mask
+    
+m1 = "In this paper we present the results of an experiment in <m> automatic concept and definition extraction </m> from written sources of law using relatively simple natural methods."
+m2 = "This task is important since many natural language processing (NLP) problems, such as <m> information extraction </m>, summarization and dialogue."
+
+inputs = m1 + " </s></s> " + m2  
+
+tokens = tokenzier(inputs, return_tensors='pt')
+global_attention_mask = get_global_attention(tokens['input_ids'])
+
+with torch.no_grad():
+    output = model(tokens['input_ids'], tokens['attention_mask'], global_attention_mask)
+    
+scores = torch.softmax(output.logits, dim=-1)
+# tensor([[0.0818, 0.0023, 0.0019, 0.9139]]) -- m1 is a child of m2
+```
+
+
+**Note:** There is a slight difference between this model and the original model presented in the [paper](https://openreview.net/forum?id=OFLbgUP04nC). 
+The original model includes a single linear layer on top of the `<s>` token (equivalent to `[CLS]`) 
+while this model includes a two-layers MLP to be in line with `LongformerForSequenceClassification`.  
+
+
+## Training and Evaluation 
 
 ### Getting started:
 
@@ -67,7 +115,7 @@ We provide the code for training the baseline models, Pipeline and Multiclass.
 
 ### Baseline
 
-The baseline model uses our recent cross-document coreference model [(Cattan et al., 2020)](https://arxiv.org/abs/2009.11032), 
+The baseline model uses our recent cross-document coreference model [(Cattan et al., 2021)](https://aclanthology.org/2021.findings-acl.453.pdf), 
 the code is in [this](https://github.com/ariecattan/coref) repo.
 
 * __Training__: Set the `configs/config_pairwise.json` file: select any BERT model to run in the field `bert_model` and set the directory to save the model in `model_path`.
