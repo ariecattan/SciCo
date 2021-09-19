@@ -95,7 +95,13 @@ scores = torch.softmax(output.logits, dim=-1)
 
 **Note:** There is a slight difference between this model and the original model presented in the [paper](https://openreview.net/forum?id=OFLbgUP04nC). 
 The original model includes a single linear layer on top of the `<s>` token (equivalent to `[CLS]`) 
-while this model includes a two-layers MLP to be in line with `LongformerForSequenceClassification`.  
+while this model includes a two-layers MLP to be in line with `LongformerForSequenceClassification`.   
+You can download the original model as follows:
+```python
+curl -L -o model.tar https://www.dropbox.com/s/cpcnpov4liwuyd4/model.tar?dl=0
+tar -xvf model.tar 
+rm model.tar 
+```
 
 
 ## Training and Evaluation 
