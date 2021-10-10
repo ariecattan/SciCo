@@ -5,7 +5,7 @@ This repository contains the data and code for the paper:
 
 [SciCo: Hierarchical Cross-Document Coreference for Scientific Concepts](https://arxiv.org/abs/2104.08809) \
 *Arie Cattan, Sophie Johnson, Daniel S. Weld, Ido Dagan, Iz Beltagy, Doug Downey and Tom Hope* \
-AKBC 2021. 
+AKBC 2021. <b>Outstanding Paper Award! 🎉🎉</b>
 
 Check out our [website](https://scico.apps.allenai.org/)!
 
