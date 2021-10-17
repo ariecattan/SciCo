@@ -9,9 +9,6 @@ AKBC 2021. <b>Outstanding Paper Award! 🎉🎉</b>
 
 Check out our [website](https://scico.apps.allenai.org/)!
 
-**NEW**
-- :white_check_mark: Integrated to [Huggingface Spaces](https://huggingface.co/spaces) with [Gradio](https://github.com/gradio-app/gradio). See [Gradio Web Demo](https://huggingface.co/spaces/akhaliq/longformer-scico).
-
 
 ```
 @inproceedings{
@@ -23,6 +20,9 @@ Check out our [website](https://scico.apps.allenai.org/)!
     url={https://openreview.net/forum?id=OFLbgUP04nC}
 }
 ```
+
+**NEW**
+- :white_check_mark:&nbsp; Integrated to [Huggingface Spaces](https://huggingface.co/spaces) with [Gradio](https://github.com/gradio-app/gradio). See [Gradio Web Demo](https://huggingface.co/spaces/akhaliq/longformer-scico).
 
 
 
